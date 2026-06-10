@@ -1,0 +1,8 @@
+model/
+data/telco_churn.csv
+data/eval/
+
+__pycache__/
+*.pyc
+venv/
+.env

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RetainIQ — Risk Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand"><span class="brand-mark">◈</span><span class="brand-name">RetainIQ</span></div>
+    <p class="brand-tagline">Customer Retention Intelligence · Telecom Division</p>
+  </div>
+</header>
+
+<main class="main-content">
+
+  <!-- ── RISK SCORE + SEGMENT ─────────────────────────────── -->
+  <section class="result-hero">
+    <p class="hero-eyebrow">Assessment Complete</p>
+
+    <div class="top-row">
+
+      <!-- Instrument panel -->
+      <div class="risk-card risk-{{ risk | lower }}">
+        <div class="risk-score-block">
+          <span class="risk-label-sm">Churn Probability</span>
+          <span class="risk-probability" id="live-prob">{{ probability }}%</span>
+        </div>
+        <div class="risk-divider"></div>
+        <div class="risk-tier-block">
+          <span class="risk-label-sm">Risk Level</span>
+          <span class="risk-tier" id="live-risk">{{ risk }}</span>
+        </div>
+      </div>
+
+      <!-- Segment badge -->
+      <div class="segment-card segment-{{ segment.code }}">
+        <div class="segment-top">
+          <span class="segment-icon">{{ segment.icon }}</span>
+          <div>
+            <p class="segment-label-sm">Customer Segment</p>
+            <p class="segment-name">{{ segment.name }}</p>
+          </div>
+          <span class="urgency-pill urgency-{{ segment.urgency }}">{{ segment.urgency }}</span>
+        </div>
+        <p class="segment-desc">{{ segment.description }}</p>
+        <div class="segment-playbook">
+          <span class="playbook-label">Playbook</span>
+          <span class="playbook-text">{{ segment.playbook }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Probability bar -->
+    <div class="prob-bar-wrap">
+      <div class="prob-bar-track">
+        <div class="prob-bar-fill" id="prob-bar"
+             style="width:{{ probability }}%; background:{{ risk_color }};"></div>
+      </div>
+      <div class="prob-bar-labels">
+        <span>0%</span>
+        <span>Low · 35%</span>
+        <span>Medium · 65%</span>
+        <span>100%</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MAIN GRID: SHAP + RULES + SUGGESTIONS ────────────── -->
+  <div class="result-grid-3">
+
+    <!-- SHAP explanation -->
+    <section class="result-card shap-card">
+      <h2 class="card-title"><span class="card-title-icon">🧠</span> Model Explanation <span class="card-badge">SHAP</span></h2>
+      <p class="card-subtitle">Shapley values — how much each feature actually moved this prediction.</p>
+      <ul class="shap-list" id="shap-list">
+        {% for f in shap_factors %}
+        <li class="shap-item">
+          <div class="shap-header">
+            <span class="shap-feat">{{ f.feature_label }}</span>
+            <span class="shap-val" style="color:{{ f.direction_color }}">
+              {{ "+" if f.shap_value > 0 else "" }}{{ f.shap_value }}
+            </span>
+          </div>
+          <div class="shap-bar-track">
+            <div class="shap-bar-fill"
+                 style="width:{{ f.bar_pct }}%; background:{{ f.direction_color }};"></div>
+          </div>
+          <div class="shap-story" style="margin-top:6px; font-size:12px; color:#8B949E;">
+  {{ f.story }}
+</div>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <!-- Rule-based reasons -->
+    <section class="result-card">
+      <h2 class="card-title"><span class="card-title-icon">🔍</span> Churn Drivers <span class="card-badge">Rules</span></h2>
+      <p class="card-subtitle">Domain-grounded factors, ordered by business impact.</p>
+      <ul class="reason-list">
+        {% for r in reasons %}
+        <li class="reason-item reason-{{ r.weight }}">
+          <span class="reason-icon">{{ r.icon }}</span>
+          <span class="reason-text">{{ r.text }}</span>
+          <span class="reason-badge reason-badge-{{ r.weight }}">{{ r.weight }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <!-- Retention suggestions -->
+    <section class="result-card">
+      <h2 class="card-title"><span class="card-title-icon">💡</span> Retention Actions</h2>
+      <p class="card-subtitle">Targeted interventions your team can act on today.</p>
+      <ul class="suggestion-list">
+        {% for s in suggestions %}
+        <li class="suggestion-item">
+          <div class="suggestion-header">
+            <span class="suggestion-icon">{{ s.icon }}</span>
+            <strong class="suggestion-action">{{ s.action }}</strong>
+          </div>
+          <p class="suggestion-detail">{{ s.detail }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  </div>
+
+  <!-- ── SHAP WATERFALL CHART ──────────────────────────────── -->
+  <section class="result-card chart-card">
+    <h2 class="card-title"><span class="card-title-icon">📊</span> SHAP Waterfall Chart</h2>
+    <p class="card-subtitle">Full feature contribution breakdown for this prediction.</p>
+    <div class="chart-wrap">
+      <img src="data:image/png;base64,{{ shap_chart }}"
+           alt="SHAP waterfall chart" class="shap-chart-img"/>
+    </div>
+  </section>
+
+  <!-- ── WHAT-IF SIMULATOR ─────────────────────────────────── -->
+  <section class="result-card whatif-card">
+    <h2 class="card-title"><span class="card-title-icon">⚗️</span> What-If Simulator</h2>
+    <p class="card-subtitle">Change customer attributes and instantly see how churn probability shifts.</p>
+
+    <div class="whatif-grid">
+
+      <div class="whatif-controls">
+        <div class="sim-field">
+          <label>Contract Type</label>
+          <select id="sim-contract">
+            <option value="Month-to-month" {% if form_data.Contract == 'Month-to-month' %}selected{% endif %}>Month-to-month</option>
+            <option value="One year"       {% if form_data.Contract == 'One year' %}selected{% endif %}>One year</option>
+            <option value="Two year"       {% if form_data.Contract == 'Two year' %}selected{% endif %}>Two year</option>
+          </select>
+        </div>
+
+        <div class="sim-field">
+          <label>Monthly Charges ($)</label>
+          <input type="number" id="sim-monthly" step="5"
+                 value="{{ form_data.MonthlyCharges }}">
+        </div>
+
+        <div class="sim-field">
+          <label>Tenure (months)</label>
+          <input type="number" id="sim-tenure" min="0" max="72"
+                 value="{{ form_data.tenure }}">
+        </div>
+
+        <div class="sim-field">
+          <label>Tech Support</label>
+          <select id="sim-techsupport">
+            <option value="Yes" {% if form_data.TechSupport == 'Yes' %}selected{% endif %}>Yes</option>
+            <option value="No"  {% if form_data.TechSupport == 'No' %}selected{% endif %}>No</option>
+          </select>
+        </div>
+
+        <div class="sim-field">
+          <label>Payment Method</label>
+          <select id="sim-payment">
+            <option value="Electronic check"          {% if form_data.PaymentMethod == 'Electronic check' %}selected{% endif %}>Electronic check</option>
+            <option value="Mailed check"              {% if form_data.PaymentMethod == 'Mailed check' %}selected{% endif %}>Mailed check</option>
+            <option value="Bank transfer (automatic)" {% if form_data.PaymentMethod == 'Bank transfer (automatic)' %}selected{% endif %}>Bank transfer (auto)</option>
+            <option value="Credit card (automatic)"   {% if form_data.PaymentMethod == 'Credit card (automatic)' %}selected{% endif %}>Credit card (auto)</option>
+          </select>
+        </div>
+
+        <div class="sim-field">
+          <label>Online Security</label>
+          <select id="sim-security">
+            <option value="Yes" {% if form_data.OnlineSecurity == 'Yes' %}selected{% endif %}>Yes</option>
+            <option value="No"  {% if form_data.OnlineSecurity == 'No' %}selected{% endif %}>No</option>
+          </select>
+        </div>
+
+        <button class="btn-simulate" onclick="runWhatIf()">
+          Simulate Changes →
+        </button>
+      </div>
+
+      <!-- Simulator result panel -->
+      <div class="whatif-result" id="whatif-result" style="display:none;">
+        <div class="sim-comparison">
+          <div class="sim-before">
+            <p class="sim-label">Before</p>
+            <p class="sim-prob-val">{{ probability }}%</p>
+            <p class="sim-risk-val risk-text-{{ risk | lower }}">{{ risk }}</p>
+          </div>
+          <div class="sim-arrow">→</div>
+          <div class="sim-after">
+            <p class="sim-label">After</p>
+            <p class="sim-prob-val" id="sim-new-prob">—</p>
+            <p class="sim-risk-val" id="sim-new-risk">—</p>
+          </div>
+        </div>
+        <div class="delta-wrap" id="delta-wrap">
+          <span class="delta-label">Change</span>
+          <span class="delta-value" id="delta-value">—</span>
+        </div>
+
+        <!-- Mini SHAP for simulated scenario -->
+        <div class="sim-shap-wrap" id="sim-shap-wrap"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── INPUT SUMMARY ─────────────────────────────────────── -->
+  <section class="input-summary">
+    <h3 class="summary-title">Input Summary</h3>
+    <div class="summary-grid">
+      <div class="summary-item"><span class="summary-key">Tenure</span><span class="summary-val">{{ form_data.tenure }} months</span></div>
+      <div class="summary-item"><span class="summary-key">Monthly Charges</span><span class="summary-val">${{ form_data.MonthlyCharges }}</span></div>
+      <div class="summary-item"><span class="summary-key">Contract</span><span class="summary-val">{{ form_data.Contract }}</span></div>
+      <div class="summary-item"><span class="summary-key">Payment</span><span class="summary-val">{{ form_data.PaymentMethod }}</span></div>
+      <div class="summary-item"><span class="summary-key">Internet</span><span class="summary-val">{{ form_data.InternetService }}</span></div>
+      <div class="summary-item"><span class="summary-key">Tech Support</span><span class="summary-val">{{ form_data.TechSupport }}</span></div>
+    </div>
+  </section>
+
+  <div class="back-wrap">
+    <a href="/" class="btn-back">← Assess another customer</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <p>RetainIQ · SHAP + GradientBoosting · IBM Telco dataset · scikit-learn</p>
+</footer>
+
+<script>
+const ORIGINAL_PROB = {{ probability }};
+const FORM_DATA     = {{ form_data_json | safe }};
+
+async function runWhatIf() {
+  const btn = document.querySelector(".btn-simulate");
+  btn.textContent = "Running…";
+  btn.disabled = true;
+
+  // Build modified form data from simulator controls
+  const modified = Object.assign({}, FORM_DATA, {
+    Contract:      document.getElementById("sim-contract").value,
+    MonthlyCharges:document.getElementById("sim-monthly").value,
+    tenure:        document.getElementById("sim-tenure").value,
+    TechSupport:   document.getElementById("sim-techsupport").value,
+    PaymentMethod: document.getElementById("sim-payment").value,
+    OnlineSecurity:document.getElementById("sim-security").value,
+  });
+
+  try {
+    const resp = await fetch("/whatif", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ original_prob: ORIGINAL_PROB, form_data: modified })
+    });
+    const data = await resp.json();
+    showWhatIfResult(data);
+  } catch(e) {
+    console.error(e);
+  } finally {
+    btn.textContent = "Simulate Changes →";
+    btn.disabled = false;
+  }
+}
+
+function showWhatIfResult(data) {
+  const panel = document.getElementById("whatif-result");
+  panel.style.display = "block";
+
+  document.getElementById("sim-new-prob").textContent = data.new_prob + "%";
+
+  const riskEl = document.getElementById("sim-new-risk");
+  riskEl.textContent = data.new_risk;
+  riskEl.className   = "sim-risk-val risk-text-" + data.new_risk.toLowerCase();
+
+  const deltaEl = document.getElementById("delta-value");
+  const dSign   = data.delta >= 0 ? "+" : "";
+  deltaEl.textContent = dSign + data.delta + "%";
+  deltaEl.className   = "delta-value " + (data.delta >= 0 ? "delta-up" : "delta-down");
+
+  // Mini SHAP for simulated scenario
+  const shapWrap = document.getElementById("sim-shap-wrap");
+  shapWrap.innerHTML = `<p class="sim-shap-title">Updated SHAP Factors</p>` +
+    data.shap_factors.map(f => `
+      <div class="sim-shap-row">
+        <span class="sim-shap-feat">${f.feature_label}</span>
+        <div class="shap-bar-track" style="flex:1; margin: 0 8px;">
+          <div class="shap-bar-fill" style="width:${f.bar_pct}%; background:${f.direction_color};"></div>
+        </div>
+        <span class="sim-shap-val" style="color:${f.direction_color}">
+          ${f.shap_value >= 0 ? '+' : ''}${f.shap_value}
+        </span>
+      </div>`).join("");
+
+  // Scroll to panel
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+</script>
+
+</body>
+</html>
