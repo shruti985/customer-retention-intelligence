@@ -61,14 +61,12 @@ Recommended Actions:
 ```
 
 
-```md
-![Dashboard](assets/dashboard.png)
-![Prediction Result](assets/result.png)
-![Simulator Result](assets/shap.png)
+![Dashboard](https://raw.githubusercontent.com/shruti985/customer-retention-intelligence/main/assets/dashboard.png)
 
-```
+![Prediction Result](https://raw.githubusercontent.com/shruti985/customer-retention-intelligence/main/assets/result.png)
 
----
+![SHAP Explanation](https://raw.githubusercontent.com/shruti985/customer-retention-intelligence/main/assets/shap.png)
+
 
 ## Architecture
 
@@ -228,7 +226,7 @@ customer-retention-intelligence/
 
 ```bash
 # Clone repository
-git https://github.com/shruti985/customer-retention-intelligence
+git clone https://github.com/shruti985/customer-retention-intelligence
 cd customer-retention-intelligence
 
 # Create virtual environment
